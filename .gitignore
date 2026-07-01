@@ -1,0 +1,13 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock.orig
+
+# Brainstorming / visual companion scratch (mockups persist under docs/)
+/.superpowers/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

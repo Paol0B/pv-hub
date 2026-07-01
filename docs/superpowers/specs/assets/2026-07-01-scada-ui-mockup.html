@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pv-hub SCADA · premium</title>
+<style>
+  /* ---------- semantic tokens ---------- */
+  :root[data-theme="dark"]{
+    --bg:#0a0e15; --bg-grad1:#0d1420; --bg-grad2:#090c12;
+    --surface:#121a26; --surface-2:#182231; --inner:#0e1622;
+    --border:rgba(255,255,255,.07); --border-str:rgba(255,255,255,.12);
+    --text:#e9eef5; --dim:#8b98ab; --faint:#5b6779;
+    --accent:#10d992; --accent-2:#0bb47a; --accent-weak:rgba(16,217,146,.14);
+    --gold:#ffc24b; --gold-2:#ff8a3d; --gold-weak:rgba(255,194,75,.12);
+    --good:#10d992; --warn:#ffc24b; --bad:#ff6b6b; --info:#48b7ff;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px rgba(0,0,0,.35);
+    --grid-line:rgba(255,255,255,.06);
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f5f2; --bg-grad1:#f7f7f4; --bg-grad2:#eef0ec;
+    --surface:#ffffff; --surface-2:#f5f6f8; --inner:#f0f2f4;
+    --border:rgba(15,23,42,.08); --border-str:rgba(15,23,42,.14);
+    --text:#0f1b2d; --dim:#5b6675; --faint:#94a0b0;
+    --accent:#059669; --accent-2:#047857; --accent-weak:rgba(5,150,105,.10);
+    --gold:#d9861a; --gold-2:#e0932a; --gold-weak:rgba(217,134,26,.12);
+    --good:#059669; --warn:#d9861a; --bad:#e5484d; --info:#0284c7;
+    --shadow:0 1px 2px rgba(16,24,40,.05), 0 10px 26px rgba(16,24,40,.07);
+    --grid-line:rgba(15,23,42,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--text);font-size:14px;
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:radial-gradient(1200px 600px at 70% -10%,var(--bg-grad1),var(--bg-grad2)) fixed, var(--bg);
+    -webkit-font-smoothing:antialiased}
+  .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";
+    font-family:ui-monospace,'SF Mono','Cascadia Code',Menlo,monospace}
+  .wrap{max-width:1180px;margin:0 auto;padding:16px}
+
+  /* ---------- top bar ---------- */
+  .topbar{display:flex;align-items:center;gap:18px;background:var(--surface);
+    border:1px solid var(--border);border-radius:16px;padding:14px 18px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:20px;
+    background:linear-gradient(135deg,var(--gold),var(--gold-2));box-shadow:0 4px 14px var(--gold-weak)}
+  .brand{font-weight:700;font-size:17px;letter-spacing:.2px;line-height:1.1}
+  .brand small{display:block;color:var(--dim);font-weight:500;font-size:11px;letter-spacing:.4px}
+  .site{margin-left:6px;font-size:13px;color:var(--dim)}
+  .site b{color:var(--text)}
+  .site .coords{display:block;font-size:11px;color:var(--info)}
+  .badges{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .badge{display:flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:999px;padding:6px 12px;font-size:12px}
+  .badge.mono{letter-spacing:.3px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px var(--accent-weak)}
+  .dot.warn{background:var(--warn);box-shadow:0 0 0 3px var(--gold-weak)}
+  .toggle{width:40px;height:40px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);
+    color:var(--text);cursor:pointer;font-size:17px;display:grid;place-items:center;transition:.15s}
+  .toggle:hover{border-color:var(--border-str);transform:translateY(-1px)}
+
+  /* ---------- layout ---------- */
+  .grid{display:grid;grid-template-columns:296px 1fr 258px;gap:14px}
+  .col{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 12px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);font-weight:600}
+
+  /* map */
+  .map{height:148px;border-radius:12px;position:relative;overflow:hidden;border:1px solid var(--border);
+    background:
+      repeating-linear-gradient(0deg,transparent 0 25px,var(--grid-line) 25px 26px),
+      repeating-linear-gradient(90deg,transparent 0 25px,var(--grid-line) 25px 26px),
+      radial-gradient(circle at 58% 42%,var(--accent-weak),transparent 60%),var(--inner)}
+  .pin{position:absolute;left:58%;top:42%;transform:translate(-50%,-100%);font-size:24px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
+  .maptag{position:absolute;bottom:8px;left:10px;font-size:10px;color:var(--dim);
+    background:var(--surface);border:1px solid var(--border);padding:3px 7px;border-radius:6px}
+  .kv{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--grid-line);font-size:13px}
+  .kv:last-child{border:0}.kv span{color:var(--dim)}.kv b{color:var(--text)}
+
+  /* hero */
+  .hero{display:flex;gap:18px;align-items:center}
+  .gauge{position:relative;width:158px;height:158px;flex:0 0 auto}
+  .gv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gv .lbl{font-size:10px;letter-spacing:1.2px;color:var(--dim);text-transform:uppercase}
+  .gv .num{font-size:34px;font-weight:750;line-height:1.05;letter-spacing:-1px}
+  .gv .unit{color:var(--dim);font-size:12px}
+  .compare{flex:1;display:flex;flex-direction:column;gap:10px}
+  .cmp{display:flex;justify-content:space-between;align-items:center;background:var(--surface-2);
+    border:1px solid var(--border);border-radius:12px;padding:11px 14px}
+  .cmp small{color:var(--dim);font-size:11px}
+  .cmp .n{font-size:19px;font-weight:650}
+  .delta{font-weight:650;color:var(--good)}
+  .pill{font-size:11px;padding:2px 9px;border-radius:999px;background:var(--accent-weak);color:var(--accent);font-weight:600}
+
+  .meters{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:14px}
+  .meter{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .meter .top{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);letter-spacing:.3px}
+  .meter .val{font-size:22px;font-weight:700;margin:5px 0 9px;letter-spacing:-.5px}
+  .bar{height:7px;background:var(--inner);border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gold),var(--gold-2))}
+
+  .sky{width:100%;height:172px;display:block}
+
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tile{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:11px 12px}
+  .tile .t{font-size:11px;color:var(--dim);display:flex;gap:6px;align-items:center}
+  .tile .v{font-size:19px;font-weight:700;margin-top:5px;letter-spacing:-.3px}
+  .kt{display:flex;align-items:center;gap:14px}
+
+  .footer{margin-top:14px;display:flex;gap:16px;align-items:center;color:var(--faint);font-size:11px;
+    border-top:1px solid var(--border);padding-top:12px}
+  .footer a{color:var(--info);text-decoration:none}.footer a:hover{text-decoration:underline}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="logo">☀</div>
+    <div>
+      <div class="brand">pv-hub<small>SOLARIMETRO</small></div>
+    </div>
+    <div class="site">Sito: <b>Impianto Demo — Milano</b>
+      <span class="coords mono">45.4642°N · 9.1900°E · 120 m</span></div>
+    <div class="badges">
+      <div class="badge"><span class="dot"></span>Provider</div>
+      <div class="badge mono"><span class="dot"></span>Modbus :502</div>
+      <div class="badge"><span class="dot"></span>Live</div>
+      <div class="badge mono"><span class="dot warn"></span>meteo 4m</div>
+      <button class="toggle" id="tg" onclick="tt()" title="Cambia tema">🌙</button>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div class="col">
+      <div class="card">
+        <h3>Posizione</h3>
+        <div class="map"><div class="pin">📍</div><div class="maptag">Leaflet · OSM · live</div></div>
+      </div>
+      <div class="card">
+        <h3>Impianto</h3>
+        <div class="kv"><span>Tilt</span><b class="mono">30°</b></div>
+        <div class="kv"><span>Azimuth</span><b class="mono">180° · S</b></div>
+        <div class="kv"><span>Albedo</span><b class="mono">0.20</b></div>
+        <div class="kv"><span>AOI sole→pannello</span><b class="mono">12.4°</b></div>
+      </div>
+      <div class="card">
+        <h3>Diagnostica · serenità</h3>
+        <div class="kt">
+          <svg width="78" height="78" viewBox="0 0 78 78">
+            <circle cx="39" cy="39" r="30" fill="none" stroke="var(--inner)" stroke-width="9"
+              stroke-dasharray="141 235" transform="rotate(135 39 39)" stroke-linecap="round"/>
+            <circle cx="39" cy="39" r="30" fill="none" stroke="var(--accent)" stroke-width="9"
+              stroke-dasharray="121 235" transform="rotate(135 39 39)" stroke-linecap="round"/>
+            <text x="39" y="44" text-anchor="middle" fill="var(--text)" class="mono" font-size="17" font-weight="700">0.86</text>
+          </svg>
+          <div><b style="color:var(--accent)">Cielo sereno</b>
+            <div style="color:var(--dim);font-size:11px;margin-top:2px">kt = GHI / GHI<sub>clear-sky</sub></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="col">
+      <div class="card">
+        <h3>Irraggiamento sul piano (POA) · locale vs provider</h3>
+        <div class="hero">
+          <div class="gauge">
+            <svg width="158" height="158" viewBox="0 0 158 158">
+              <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="var(--gold)"/><stop offset="1" stop-color="var(--gold-2)"/>
+              </linearGradient></defs>
+              <circle cx="79" cy="79" r="65" fill="none" stroke="var(--inner)" stroke-width="13"
+                stroke-dasharray="306 408" transform="rotate(135 79 79)" stroke-linecap="round"/>
+              <circle cx="79" cy="79" r="65" fill="none" stroke="url(#g)" stroke-width="13"
+                stroke-dasharray="231 408" transform="rotate(135 79 79)" stroke-linecap="round"/>
+            </svg>
+            <div class="gv"><div class="lbl">POA local</div>
+              <div class="num mono">905</div><div class="unit">W/m²</div></div>
+          </div>
+          <div class="compare">
+            <div class="cmp"><div><small>POA provider</small><br><span class="n mono">918</span> <small>W/m²</small></div>
+              <div style="text-align:right"><small>Δ</small><br><span class="delta mono">−1.4%</span></div></div>
+            <div class="cmp"><div><small>Extraterrestre</small><br><span class="n mono">1358</span> <small>W/m²</small></div>
+              <span class="pill">air mass 1.13</span></div>
+          </div>
+        </div>
+        <div class="meters">
+          <div class="meter"><div class="top"><span>GHI</span><span>W/m²</span></div><div class="val mono">812</div><div class="bar"><i style="width:68%"></i></div></div>
+          <div class="meter"><div class="top"><span>DNI</span><span>W/m²</span></div><div class="val mono">690</div><div class="bar"><i style="width:74%"></i></div></div>
+          <div class="meter"><div class="top"><span>DHI</span><span>W/m²</span></div><div class="val mono">145</div><div class="bar"><i style="width:29%"></i></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Percorso del sole · ora</h3>
+        <svg class="sky" viewBox="0 0 520 172" preserveAspectRatio="xMidYMid meet">
+          <defs><linearGradient id="arc" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="var(--gold)"/><stop offset="1" stop-color="var(--gold-2)"/></linearGradient></defs>
+          <line x1="20" y1="150" x2="500" y2="150" stroke="var(--border-str)" stroke-width="1.5"/>
+          <text x="20" y="166" fill="var(--dim)" font-size="10" class="mono">E</text>
+          <text x="256" y="166" fill="var(--dim)" font-size="10" class="mono">S</text>
+          <text x="494" y="166" fill="var(--dim)" font-size="10" class="mono">W</text>
+          <path d="M20,150 Q260,-38 500,150" fill="none" stroke="var(--dim)" stroke-width="1.5" stroke-dasharray="3 5" opacity=".55"/>
+          <path d="M20,150 Q160,-6 292,44" fill="none" stroke="url(#arc)" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="292" cy="44" r="11" fill="var(--gold)"/>
+          <circle cx="292" cy="44" r="20" fill="none" stroke="var(--gold)" stroke-width="1.5" opacity=".35"/>
+          <text x="310" y="42" fill="var(--text)" font-size="11" class="mono">elev 62.1°</text>
+          <text x="310" y="56" fill="var(--dim)" font-size="11" class="mono">az 178°</text>
+          <text x="30" y="28" fill="var(--dim)" font-size="10" class="mono">☀ 05:41   ▲ noon 13:12   ☾ 20:44</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col">
+      <div class="card">
+        <h3>Temperature</h3>
+        <div class="tiles">
+          <div class="tile"><div class="t">🌡️ Ambiente</div><div class="v mono">27.4°C</div></div>
+          <div class="tile"><div class="t">🔆 Modulo*</div><div class="v mono">44.1°C</div></div>
+        </div>
+        <div style="color:var(--faint);font-size:10px;margin-top:7px">*stima Faiman · POA + vento</div>
+      </div>
+      <div class="card">
+        <h3>Meteo</h3>
+        <div class="tiles">
+          <div class="tile"><div class="t">💨 Vento</div><div class="v mono">3.2 m/s</div></div>
+          <div class="tile"><div class="t">🧭 Dir</div><div class="v mono">225°</div></div>
+          <div class="tile"><div class="t">💧 Umidità</div><div class="v mono">41%</div></div>
+          <div class="tile"><div class="t">☁️ Nuvole</div><div class="v mono">12%</div></div>
+          <div class="tile"><div class="t">🌧️ Pioggia</div><div class="v mono">0.0</div></div>
+          <div class="tile"><div class="t">📊 Press.</div><div class="v mono">1013</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Salute</h3>
+        <div class="kv"><span>Ultimo poll</span><b class="mono">4m 12s</b></div>
+        <div class="kv"><span>Errori poll</span><b class="mono">0</b></div>
+        <div class="kv"><span>Fonte</span><b>Open-Meteo</b></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <span class="mono">pv-hub v0.1</span>
+    <a href="#">/api/state.json</a>
+    <a href="#">/api/stream · SSE</a>
+    <a href="#">mappa registri Modbus</a>
+    <span style="margin-left:auto">Dati · Open-Meteo</span>
+  </div>
+
+</div>
+<script>
+  function tt(){
+    var r=document.documentElement;
+    var d=r.getAttribute('data-theme')==='dark';
+    r.setAttribute('data-theme', d?'light':'dark');
+    document.getElementById('tg').textContent = d?'☀️':'🌙';
+  }
+</script>
+</body>
+</html>
