@@ -45,6 +45,15 @@ pub async fn run() -> Result<()> {
             }
         }));
     }
+    {
+        let c = cfg.clone();
+        let h = hub.clone();
+        tasks.push(tokio::spawn(async move {
+            if let Err(e) = sinks::http::serve(c, h).await {
+                tracing::error!("http server error: {e}");
+            }
+        }));
+    }
 
     tokio::signal::ctrl_c().await.ok();
     tracing::info!("shutdown signal received; stopping");

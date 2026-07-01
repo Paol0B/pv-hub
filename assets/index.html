@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pv-hub · Solarimetro</title>
+<link rel="stylesheet" href="/assets/vendor/leaflet.css">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="logo">☀</div>
+    <div>
+      <div class="brand">pv-hub<small>SOLARIMETRO</small></div>
+    </div>
+    <div class="site">Sito: <b id="site-name">—</b>
+      <span class="coords mono" id="site-coords">—</span></div>
+    <div class="badges">
+      <div class="badge" id="provider-badge"><span class="dot"></span>Provider</div>
+      <div class="badge mono" id="modbus-badge"><span class="dot"></span>Modbus</div>
+      <div class="badge" id="live-badge"><span class="dot"></span>Live</div>
+      <div class="badge mono"><span class="dot warn"></span><span data-metric="data_age">—</span>s</div>
+      <button class="toggle" id="tg" onclick="toggleTheme()" title="Cambia tema">🌙</button>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div class="col">
+      <div class="card">
+        <h3>Posizione</h3>
+        <div id="map"></div>
+      </div>
+      <div class="card">
+        <h3>Impianto</h3>
+        <div class="kv"><span>Tilt</span><b class="mono"><span data-metric="tilt">—</span>°</b></div>
+        <div class="kv"><span>Azimuth</span><b class="mono" id="azimuth-field">—</b></div>
+        <div class="kv"><span>Albedo</span><b class="mono" data-metric="albedo">—</b></div>
+        <div class="kv"><span>AOI sole→pannello</span><b class="mono"><span data-metric="aoi">—</span>°</b></div>
+      </div>
+      <div class="card">
+        <h3>Diagnostica · serenità</h3>
+        <div class="kt">
+          <svg width="84" height="84" viewBox="0 0 84 84">
+            <circle cx="42" cy="42" r="30" fill="none" stroke="var(--inner)" stroke-width="9"
+              stroke-dasharray="141 235" transform="rotate(135 42 42)" stroke-linecap="round"/>
+            <circle id="kt-arc" cx="42" cy="42" r="30" fill="none" stroke="var(--accent)" stroke-width="9"
+              stroke-dasharray="0 235" transform="rotate(135 42 42)" stroke-linecap="round"/>
+            <text x="42" y="47" text-anchor="middle" fill="var(--text)" class="mono" font-size="17" font-weight="700"
+              data-metric="clearsky_index">—</text>
+          </svg>
+          <div><b id="kt-label" class="accent">—</b>
+            <div class="hint">kt = GHI / GHI cielo-sereno</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="col">
+      <div class="card">
+        <h3>Irraggiamento sul piano (POA) · locale vs provider</h3>
+        <div class="hero">
+          <div class="gauge">
+            <svg width="164" height="164" viewBox="0 0 164 164">
+              <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="var(--gold)"/><stop offset="1" stop-color="var(--gold-2)"/>
+              </linearGradient></defs>
+              <circle cx="82" cy="82" r="65" fill="none" stroke="var(--inner)" stroke-width="13"
+                stroke-dasharray="306 408" transform="rotate(135 82 82)" stroke-linecap="round"/>
+              <circle id="poa-arc" cx="82" cy="82" r="65" fill="none" stroke="url(#g)" stroke-width="13"
+                stroke-dasharray="0 408" transform="rotate(135 82 82)" stroke-linecap="round"/>
+            </svg>
+            <div class="gv"><div class="lbl">POA local</div>
+              <div class="num mono" data-metric="poa_local">—</div><div class="unit">W/m²</div></div>
+          </div>
+          <div class="compare">
+            <div class="cmp"><div><small>POA provider</small><br><span class="n mono" data-metric="poa_provider">—</span> <small>W/m²</small></div>
+              <div class="ta"><small>Δ</small><br><span class="delta mono"><span data-metric="poa_delta_pct">—</span>%</span></div></div>
+            <div class="cmp"><div><small>Extraterrestre</small><br><span class="n mono" data-metric="extraterrestrial">—</span> <small>W/m²</small></div>
+              <span class="pill">air mass <span data-metric="air_mass">—</span></span></div>
+          </div>
+        </div>
+        <div class="meters">
+          <div class="meter"><div class="top"><span>GHI</span><span>W/m²</span></div><div class="val mono" data-metric="ghi">—</div><div class="bar"><i id="bar-ghi"></i></div></div>
+          <div class="meter"><div class="top"><span>DNI</span><span>W/m²</span></div><div class="val mono" data-metric="dni">—</div><div class="bar"><i id="bar-dni"></i></div></div>
+          <div class="meter"><div class="top"><span>DHI</span><span>W/m²</span></div><div class="val mono" data-metric="dhi">—</div><div class="bar"><i id="bar-dhi"></i></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Percorso del sole · ora</h3>
+        <svg class="sky" viewBox="0 0 520 172" preserveAspectRatio="xMidYMid meet">
+          <defs><linearGradient id="arc" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="var(--gold)"/><stop offset="1" stop-color="var(--gold-2)"/></linearGradient></defs>
+          <line x1="20" y1="150" x2="500" y2="150" stroke="var(--border-str)" stroke-width="1.5"/>
+          <text x="20" y="166" fill="var(--dim)" font-size="10" class="mono">E</text>
+          <text x="256" y="166" fill="var(--dim)" font-size="10" class="mono">S</text>
+          <text x="494" y="166" fill="var(--dim)" font-size="10" class="mono">W</text>
+          <path d="M20,150 Q260,-38 500,150" fill="none" stroke="var(--dim)" stroke-width="1.5" stroke-dasharray="3 5" opacity=".5"/>
+          <circle id="sun-glow" cx="260" cy="42" r="20" fill="none" stroke="var(--gold)" stroke-width="1.5" opacity=".35"/>
+          <circle id="sun-dot" cx="260" cy="42" r="11" fill="var(--gold)"/>
+          <text x="30" y="28" fill="var(--dim)" font-size="11" class="mono">
+            elev <tspan id="sun-elev">—</tspan>°  ·  az <tspan id="sun-az">—</tspan>°</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col">
+      <div class="card">
+        <h3>Temperature</h3>
+        <div class="tiles">
+          <div class="tile"><div class="t">🌡️ Ambiente</div><div class="v mono"><span data-metric="ambient_temp">—</span>°C</div></div>
+          <div class="tile"><div class="t">🔆 Modulo*</div><div class="v mono"><span data-metric="module_temp">—</span>°C</div></div>
+        </div>
+        <div class="hint">*stima Faiman · POA + vento</div>
+      </div>
+      <div class="card">
+        <h3>Meteo</h3>
+        <div class="tiles">
+          <div class="tile"><div class="t">💨 Vento</div><div class="v mono"><span data-metric="wind_speed">—</span> m/s</div></div>
+          <div class="tile"><div class="t">🧭 Dir</div><div class="v mono"><span data-metric="wind_direction">—</span>°</div></div>
+          <div class="tile"><div class="t">💧 Umidità</div><div class="v mono"><span data-metric="rel_humidity">—</span>%</div></div>
+          <div class="tile"><div class="t">☁️ Nuvole</div><div class="v mono"><span data-metric="cloud_cover">—</span>%</div></div>
+          <div class="tile"><div class="t">🌧️ Pioggia</div><div class="v mono" data-metric="precipitation">—</div></div>
+          <div class="tile"><div class="t">📊 Press.</div><div class="v mono" data-metric="surface_pressure">—</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Salute</h3>
+        <div class="kv"><span>Ultimo aggiornamento</span><b class="mono" id="dataage-field">—</b></div>
+        <div class="kv"><span>Errori poll</span><b class="mono" data-metric="poll_errors_total">—</b></div>
+        <div class="kv"><span>Fonte</span><b id="provider-field">—</b></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <span class="mono">pv-hub v0.1</span>
+    <a href="/api/state.json">/api/state.json</a>
+    <a href="/api/stream">/api/stream · SSE</a>
+    <a href="/api/catalog.json">/api/catalog.json</a>
+    <span class="grow"></span>
+    <span>Dati · <a href="https://open-meteo.com">Open-Meteo</a></span>
+  </div>
+
+</div>
+<script src="/assets/vendor/leaflet.js"></script>
+<script src="/assets/app.js"></script>
+</body>
+</html>

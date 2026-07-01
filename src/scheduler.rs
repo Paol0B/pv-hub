@@ -14,6 +14,11 @@ pub async fn weather_loop(cfg: Config, hub: Hub) {
         match provider.poll().await {
             Ok(samples) => {
                 hub.apply(&samples, Some(Utc::now()), Some(true)).await;
+                // Recompute solar-derived metrics (POA, module temp, kt) immediately so
+                // they don't lag the weather update until the next solar tick.
+                let snap = hub.snapshot().await;
+                let solar = SolarEngine::compute(&cfg, Utc::now(), &snap.weather_inputs());
+                hub.apply(&solar, None, None).await;
                 tracing::info!("weather updated ({} samples)", samples.len());
                 backoff = 1;
                 tokio::time::sleep(Duration::from_secs(cfg.poll_interval_s)).await;
