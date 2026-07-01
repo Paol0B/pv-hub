@@ -92,12 +92,13 @@ let map, marker;
 function initMap(lat, lon) {
   if (!window.L || map || lat === undefined || lon === undefined) return;
   map = L.map("map", {
-    zoomControl: true, attributionControl: true, scrollWheelZoom: false,
+    zoomControl: true, attributionControl: false, scrollWheelZoom: false,
   }).setView([lat, lon], 16);
-  // Satellite base (Esri World Imagery — free, no API key)
+  // Satellite base (Esri World Imagery — free, no API key). Attribution is
+  // shown discreetly in the page footer, not over the map.
   L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    { maxZoom: 19, attribution: "Tiles © Esri, Maxar, Earthstar Geographics" }
+    { maxZoom: 19 }
   ).addTo(map);
   // Place & road labels overlay → complete hybrid view
   L.tileLayer(
