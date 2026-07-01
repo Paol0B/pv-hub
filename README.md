@@ -7,7 +7,7 @@ A tiny Rust microservice that turns **free weather/solar APIs** into a **virtual
 
 One site per container; configure it with coordinates as environment variables. Single static binary, distroless image, a few MB of RAM.
 
-![dashboard](docs/superpowers/specs/assets/2026-07-01-scada-ui-mockup.html)
+> UI reference / mockup: [`docs/superpowers/specs/assets/2026-07-01-scada-ui-mockup.html`](docs/superpowers/specs/assets/2026-07-01-scada-ui-mockup.html) (open in a browser)
 
 ---
 
