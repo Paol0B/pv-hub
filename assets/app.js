@@ -50,37 +50,41 @@ function setArc(id, value, max) {
   const arc270 = 2 * Math.PI * r * 0.75;
   const frac = Math.max(0, Math.min(1, value / max));
   el.setAttribute("stroke-dasharray", `${(frac * arc270).toFixed(1)} 9999`);
+  el.style.opacity = frac < 0.01 ? "0" : "1"; // hide stray cap-dot near zero
 }
 function setBar(id, value, max) {
   const el = document.getElementById(id);
   if (!el || value === null || value === undefined) return;
   el.style.width = Math.max(0, Math.min(100, (value / max) * 100)).toFixed(0) + "%";
 }
-// quadratic bezier P0(20,150) P1(260,-38) P2(500,150)
-function bezier(t) {
-  const mt = 1 - t;
-  const x = mt * mt * 20 + 2 * mt * t * 260 + t * t * 500;
-  const y = mt * mt * 150 + 2 * mt * t * -38 + t * t * 150;
-  return [x, y];
-}
+// Sky dome: x from azimuth (E=left, S=middle, W=right), y from elevation
+// (horizon at y=150, higher sun = higher up). At night the sun sits dimmed
+// on the horizon at its compass direction, with a moon label.
 function updateSun(elev, az) {
   const dot = document.getElementById("sun-dot");
   const glow = document.getElementById("sun-glow");
   const et = document.getElementById("sun-elev");
   const at = document.getElementById("sun-az");
+  const label = document.getElementById("sun-label");
   if (et) et.textContent = fmt(elev);
   if (at) at.textContent = fmt(az);
-  if (!dot) return;
-  if (elev === null || elev === undefined) return;
-  const visible = elev > 0;
-  const t = Math.max(0, Math.min(1, ((az ?? 180) - 90) / 180));
-  const [x, y] = bezier(t);
+  if (!dot || elev === null || elev === undefined) return;
+
+  const day = elev > 0;
+  const fx = Math.max(0, Math.min(1, ((az ?? 180) - 90) / 180)); // 90°E→0 .. 270°W→1
+  const x = 20 + fx * 480;
+  const y = day ? 150 - (Math.min(90, elev) / 90) * 130 : 150;
+
   for (const e of [dot, glow]) {
     if (!e) continue;
     e.setAttribute("cx", x.toFixed(1));
     e.setAttribute("cy", y.toFixed(1));
-    e.style.opacity = visible ? (e.id === "sun-glow" ? ".35" : "1") : "0";
   }
+  dot.setAttribute("fill", day ? "var(--gold)" : "var(--dim)");
+  dot.setAttribute("r", day ? "11" : "7");
+  dot.style.opacity = "1";
+  glow.style.opacity = day ? ".35" : "0";
+  if (label) label.textContent = day ? "☀ giorno" : "🌙 notte";
 }
 
 // ---- Leaflet map ----
