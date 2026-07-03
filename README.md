@@ -57,6 +57,13 @@ The dashboard is at `http://localhost:8080`; the Modbus slave listens on `:502`.
 | `PVHUB_MODBUS_UNIT_ID` | `1` | Modbus unit id |
 | `PVHUB_MODBUS_WORD_ORDER` | `abcd` | `abcd` \| `cdab` (word swap for many PLCs) |
 | `PVHUB_MODBUS_HOLDING_MIRROR` | `true` | also serve values as holding registers (FC03) |
+| `PVHUB_HA_ENABLE` | `false` | enable the Home Assistant MQTT sink |
+| `PVHUB_HA_MQTT_HOST` / `_PORT` | `localhost` / `1883` | MQTT broker (HA's Mosquitto add-on) |
+| `PVHUB_HA_MQTT_USERNAME` / `_PASSWORD` | — | broker credentials (optional) |
+| `PVHUB_HA_MQTT_CLIENT_ID` | `pvhub` | MQTT client id |
+| `PVHUB_HA_DISCOVERY_PREFIX` | `homeassistant` | HA MQTT-discovery prefix |
+| `PVHUB_HA_NODE_ID` | `pvhub` | topic namespace + HA device id (use a unique id per site) |
+| `PVHUB_HA_PUBLISH_INTERVAL_S` | `30` | max interval between state publishes |
 | `PVHUB_DEFAULT_THEME` | `auto` | deprecated — the UI is dark-only since the Vision UI restyle; value ignored |
 | `PVHUB_LOG_LEVEL` | `info` | `RUST_LOG` also honored |
 
@@ -102,6 +109,44 @@ The full machine-readable map (with units) is served at `/api/catalog.json`.
 
 ---
 
+## Home Assistant sink (MQTT Discovery)
+
+Set `PVHUB_HA_ENABLE=true` and point pv-hub at an MQTT broker (Home Assistant's
+Mosquitto add-on is the usual one). pv-hub publishes **MQTT Discovery** configs so
+Home Assistant auto-creates one sensor per metric under a single **Solarimetro**
+device, with correct units and `device_class`/`state_class` (irradiance,
+temperature, wind speed, …) so history graphs work out of the box.
+
+- Discovery: `homeassistant/sensor/<node>/<metric>/config` (retained)
+- State (one JSON doc, all metrics): `pvhub/<node>/state` (retained)
+- Availability (LWT): `pvhub/<node>/status` → `online` / `offline`
+
+`<node>` is `PVHUB_HA_NODE_ID` (default `pvhub`); give each site a unique node id.
+
+pv-hub publishes only its own metrics (irradiance, POA, temperatures, geometry,
+meteo, health). Publish your PV **active power** to the same Home Assistant from
+your own software, then overlay it with irradiance on one HA chart.
+
+Example compose service:
+
+```yaml
+services:
+  pv-hub:
+    image: pv-hub:0.1
+    environment:
+      PVHUB_LATITUDE: "45.4642"
+      PVHUB_LONGITUDE: "9.19"
+      PVHUB_SITE_NAME: "My plant"
+      PVHUB_HA_ENABLE: "true"
+      PVHUB_HA_MQTT_HOST: "mosquitto"   # broker hostname/service
+      PVHUB_HA_MQTT_PORT: "1883"
+      PVHUB_HA_NODE_ID: "roof"
+    ports:
+      - "8080:8080"
+```
+
+---
+
 ## What it computes
 
 - **Solar position** (NREL/PSA algorithm): elevation, azimuth, zenith, angle of incidence, air mass, extraterrestrial irradiance.
@@ -119,7 +164,7 @@ The design centers on one `SolarState` plus a **metric catalog** (`src/catalog.r
 
 - **Add a metric:** add a variant to `Metric` (`src/model.rs`) and one line to `catalog()` — it then appears in the JSON API, the SSE stream, and the Modbus map automatically.
 - **Add a data provider:** implement the `Provider` trait (`src/providers/mod.rs`) and register it in the scheduler.
-- **Add a sink (e.g. MQTT):** read the `Hub` snapshot + catalog and publish. This is the intended next step — the architecture keeps it to a single module.
+- **Add a sink:** read the `Hub` snapshot + catalog and publish. See the Modbus, HTTP, and Home Assistant (MQTT) sinks under `src/sinks/` for the pattern — each is a single module.
 
 Run the tests with `cargo test`.
 
