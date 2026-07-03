@@ -3,11 +3,11 @@
 A tiny Rust microservice that turns **free weather/solar APIs** into a **virtual solarimeter** for photovoltaic diagnostics. It fetches irradiance and weather for one location, computes derived PV quantities locally (solar position, plane-of-array irradiance, module temperature, clearness index), and exposes everything two ways:
 
 - **Modbus TCP** (read-only slave) — for PLC/SCADA integration
-- **A responsive web SCADA dashboard** (dark/light) — map, sun path, gauges, live values via SSE
+- **A responsive web SCADA dashboard** (dark glassmorphism, Vision UI-style) — map, sun path, gauges, live values via SSE
 
 One site per container; configure it with coordinates as environment variables. Single static binary, distroless image, a few MB of RAM.
 
-> UI reference / mockup: [`docs/superpowers/specs/assets/2026-07-01-scada-ui-mockup.html`](docs/superpowers/specs/assets/2026-07-01-scada-ui-mockup.html) (open in a browser)
+> UI screenshot: [`docs/superpowers/specs/assets/2026-07-03-vision-ui-dashboard.png`](docs/superpowers/specs/assets/2026-07-03-vision-ui-dashboard.png) · original mockup: [`docs/superpowers/specs/assets/2026-07-01-scada-ui-mockup.html`](docs/superpowers/specs/assets/2026-07-01-scada-ui-mockup.html)
 
 ---
 
@@ -57,7 +57,7 @@ The dashboard is at `http://localhost:8080`; the Modbus slave listens on `:502`.
 | `PVHUB_MODBUS_UNIT_ID` | `1` | Modbus unit id |
 | `PVHUB_MODBUS_WORD_ORDER` | `abcd` | `abcd` \| `cdab` (word swap for many PLCs) |
 | `PVHUB_MODBUS_HOLDING_MIRROR` | `true` | also serve values as holding registers (FC03) |
-| `PVHUB_DEFAULT_THEME` | `auto` | `auto` \| `dark` \| `light` |
+| `PVHUB_DEFAULT_THEME` | `auto` | deprecated — the UI is dark-only since the Vision UI restyle; value ignored |
 | `PVHUB_LOG_LEVEL` | `info` | `RUST_LOG` also honored |
 
 ---

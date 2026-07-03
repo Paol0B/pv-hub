@@ -1,155 +1,345 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="dark">
+<html lang="it">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pv-hub · Solarimetro</title>
+<link rel="preload" href="/assets/vendor/fonts/PlusJakartaSans-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/vendor/leaflet.css">
 <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
-<div class="wrap">
 
-  <div class="topbar">
-    <div class="logo">☀</div>
+<!-- ============ svg sprite + shared gradients ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gradBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0075FF"/><stop offset="1" stop-color="#21D4FD"/>
+    </linearGradient>
+    <linearGradient id="gradGreen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#01B574"/><stop offset="1" stop-color="#35D28A"/>
+    </linearGradient>
+    <linearGradient id="gradArea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0075FF" stop-opacity=".34"/>
+      <stop offset="1" stop-color="#0075FF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glowBlue" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3.2" flood-color="#0075FF" flood-opacity=".85"/>
+    </filter>
+    <filter id="glowGreen" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3.2" flood-color="#01B574" flood-opacity=".85"/>
+    </filter>
+    <filter id="glowAmber" x="-80%" y="-80%" width="260%" height="260%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#FFB547" flood-opacity=".9"/>
+    </filter>
+
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></symbol>
+    <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></symbol>
+    <symbol id="i-wind" viewBox="0 0 24 24"><path d="M17.7 7.7A2.5 2.5 0 1 1 19.5 12H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z"/></symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"/><path d="M16 14v6M8 14v6M12 16v6"/></symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ sidenav ============ -->
+<div class="scrim" id="scrim" onclick="toggleSidenav(false)"></div>
+<aside class="sidenav" id="sidenav" aria-label="Navigazione principale">
+  <div class="sn-brand">
+    <span class="mark"><svg class="ic"><use href="#i-sun"/></svg></span>
+    <b>PV-HUB <span>SOLARIMETRO</span></b>
+  </div>
+  <hr class="sn-divider">
+  <nav>
+    <ul class="sn-nav">
+      <li><a class="sn-item active" href="/" aria-current="page">
+        <span class="box"><svg class="ic"><use href="#i-home"/></svg></span>Dashboard</a></li>
+      <li><a class="sn-item" href="/api/state.json">
+        <span class="box"><svg class="ic"><use href="#i-file"/></svg></span>Stato JSON</a></li>
+      <li><a class="sn-item" href="/api/stream">
+        <span class="box"><svg class="ic"><use href="#i-zap"/></svg></span>Stream SSE</a></li>
+      <li><a class="sn-item" href="/api/catalog.json">
+        <span class="box"><svg class="ic"><use href="#i-list"/></svg></span>Catalogo Modbus</a></li>
+    </ul>
+    <div class="sn-label">Risorse</div>
+    <ul class="sn-nav">
+      <li><a class="sn-item" href="https://open-meteo.com" rel="noopener">
+        <span class="box"><svg class="ic"><use href="#i-globe"/></svg></span>Open-Meteo</a></li>
+    </ul>
+  </nav>
+  <div class="sn-help">
+    <span class="box"><svg class="ic"><use href="#i-help"/></svg></span>
+    <b>Serve aiuto?</b>
+    <small>Configurazione e registri Modbus nel README</small>
+    <a href="https://github.com/Paol0B/pv-hub" rel="noopener">DOCUMENTAZIONE</a>
+  </div>
+</aside>
+
+<!-- ============ main ============ -->
+<main class="main">
+
+  <div class="navbar">
+    <button class="burger" onclick="toggleSidenav()" aria-label="Apri menu" aria-controls="sidenav">
+      <svg class="ic"><use href="#i-menu"/></svg></button>
     <div>
-      <div class="brand">pv-hub<small>SOLARIMETRO</small></div>
+      <div class="crumbs">Pagine / <b>Dashboard</b></div>
+      <div class="page-title">Dashboard</div>
     </div>
-    <div class="site">Sito: <b id="site-name">—</b>
-      <span class="coords mono" id="site-coords">—</span></div>
-    <div class="badges">
-      <div class="badge" id="provider-badge"><span class="dot"></span>Provider</div>
-      <div class="badge mono" id="modbus-badge"><span class="dot"></span>Modbus</div>
-      <div class="badge" id="live-badge"><span class="dot"></span>Live</div>
-      <div class="badge mono"><span class="dot warn"></span><span data-metric="data_age">—</span>s</div>
-      <button class="toggle" id="tg" onclick="toggleTheme()" title="Cambia tema">🌙</button>
+    <div class="nav-right">
+      <div class="pill" id="provider-badge"><span class="dot"></span>Provider</div>
+      <div class="pill" id="modbus-badge"><span class="dot"></span>Modbus</div>
+      <div class="pill" id="live-badge"><span class="dot"></span>Live</div>
+      <div class="pill mono"><b><span data-metric="data_age">—</span>s</b></div>
     </div>
   </div>
 
   <div class="grid">
 
-    <!-- LEFT -->
-    <div class="col">
-      <div class="card">
-        <h3>Posizione</h3>
-        <div id="map"></div>
+    <!-- ============ row 1 · mini stats ============ -->
+    <section class="card stat s3">
+      <div class="meta">
+        <div class="lbl">POA locale</div>
+        <div class="val mono"><span data-metric="poa_local">—</span> <small>W/m²</small>
+          <span id="poa-delta" class="up"><span data-metric="poa_delta_pct">—</span>%</span></div>
       </div>
-      <div class="card">
-        <h3>Impianto</h3>
-        <div class="kv"><span>Tilt</span><b class="mono"><span data-metric="tilt">—</span>°</b></div>
-        <div class="kv"><span>Azimuth</span><b class="mono" id="azimuth-field">—</b></div>
-        <div class="kv"><span>Albedo</span><b class="mono" data-metric="albedo">—</b></div>
-        <div class="kv"><span>AOI sole→pannello</span><b class="mono"><span data-metric="aoi">—</span>°</b></div>
+      <span class="box"><svg class="ic"><use href="#i-sun"/></svg></span>
+    </section>
+    <section class="card stat s3">
+      <div class="meta">
+        <div class="lbl">Temperatura modulo</div>
+        <div class="val mono"><span data-metric="module_temp">—</span> <small>°C</small>
+          <small>· amb <span data-metric="ambient_temp">—</span>°</small></div>
       </div>
-      <div class="card">
-        <h3>Diagnostica · serenità</h3>
-        <div class="kt">
-          <svg width="84" height="84" viewBox="0 0 84 84">
-            <circle cx="42" cy="42" r="30" fill="none" stroke="var(--inner)" stroke-width="9"
-              stroke-dasharray="141 235" transform="rotate(135 42 42)" stroke-linecap="round"/>
-            <circle id="kt-arc" cx="42" cy="42" r="30" fill="none" stroke="var(--accent)" stroke-width="9"
-              stroke-dasharray="0 235" transform="rotate(135 42 42)" stroke-linecap="round"/>
-            <text x="42" y="47" text-anchor="middle" fill="var(--text)" class="mono" font-size="17" font-weight="700"
-              data-metric="clearsky_index">—</text>
-          </svg>
-          <div><b id="kt-label" class="accent">—</b>
-            <div class="hint">kt = GHI / GHI cielo-sereno</div></div>
-        </div>
+      <span class="box"><svg class="ic"><use href="#i-thermo"/></svg></span>
+    </section>
+    <section class="card stat s3">
+      <div class="meta">
+        <div class="lbl">Vento</div>
+        <div class="val mono"><span data-metric="wind_speed">—</span> <small>m/s</small>
+          <small>· <span id="wind-dir">—</span></small></div>
       </div>
-    </div>
+      <span class="box"><svg class="ic"><use href="#i-wind"/></svg></span>
+    </section>
+    <section class="card stat s3">
+      <div class="meta">
+        <div class="lbl">Copertura nuvolosa</div>
+        <div class="val mono"><span data-metric="cloud_cover">—</span> <small>%</small></div>
+      </div>
+      <span class="box"><svg class="ic"><use href="#i-cloud"/></svg></span>
+    </section>
 
-    <!-- CENTER -->
-    <div class="col">
-      <div class="card">
-        <h3>Irraggiamento sul piano (POA) · locale vs provider</h3>
-        <div class="hero">
-          <div class="gauge">
-            <svg width="164" height="164" viewBox="0 0 164 164">
-              <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="var(--gold)"/><stop offset="1" stop-color="var(--gold-2)"/>
-              </linearGradient></defs>
-              <circle cx="82" cy="82" r="65" fill="none" stroke="var(--inner)" stroke-width="13"
-                stroke-dasharray="306 408" transform="rotate(135 82 82)" stroke-linecap="round"/>
-              <circle id="poa-arc" cx="82" cy="82" r="65" fill="none" stroke="url(#g)" stroke-width="13"
-                stroke-dasharray="0 408" transform="rotate(135 82 82)" stroke-linecap="round"/>
-            </svg>
-            <div class="gv"><div class="lbl">POA local</div>
-              <div class="num mono" data-metric="poa_local">—</div><div class="unit">W/m²</div></div>
-          </div>
-          <div class="compare">
-            <div class="cmp"><div><small>POA provider</small><br><span class="n mono" data-metric="poa_provider">—</span> <small>W/m²</small></div>
-              <div class="ta"><small>Δ</small><br><span class="delta mono"><span data-metric="poa_delta_pct">—</span>%</span></div></div>
-            <div class="cmp"><div><small>Extraterrestre</small><br><span class="n mono" data-metric="extraterrestrial">—</span> <small>W/m²</small></div>
-              <span class="pill">air mass <span data-metric="air_mass">—</span></span></div>
-          </div>
-        </div>
-        <div class="meters">
-          <div class="meter"><div class="top"><span>GHI</span><span>W/m²</span></div><div class="val mono" data-metric="ghi">—</div><div class="bar"><i id="bar-ghi"></i></div></div>
-          <div class="meter"><div class="top"><span>DNI</span><span>W/m²</span></div><div class="val mono" data-metric="dni">—</div><div class="bar"><i id="bar-dni"></i></div></div>
-          <div class="meter"><div class="top"><span>DHI</span><span>W/m²</span></div><div class="val mono" data-metric="dhi">—</div><div class="bar"><i id="bar-dhi"></i></div></div>
+    <!-- ============ row 2 · site / kt / poa ============ -->
+    <section class="card site-card s5">
+      <div class="site-info">
+        <div class="hello">Sito monitorato,</div>
+        <div class="name" id="site-name">—</div>
+        <div class="coords mono" id="site-coords">—</div>
+        <div style="margin-top:auto">
+          <div class="kv"><span>Tilt</span><b class="mono"><span data-metric="tilt">—</span>°</b></div>
+          <div class="kv"><span>Azimuth</span><b class="mono" id="azimuth-field">—</b></div>
+          <div class="kv"><span>Albedo</span><b class="mono" data-metric="albedo">—</b></div>
+          <div class="kv"><span>AOI sole→pannello</span><b class="mono"><span data-metric="aoi">—</span>°</b></div>
         </div>
       </div>
+      <div class="site-map"><div id="map"></div></div>
+    </section>
 
-      <div class="card">
-        <h3>Percorso del sole · ora</h3>
-        <svg class="sky" viewBox="0 0 520 172" preserveAspectRatio="xMidYMid meet">
-          <defs><linearGradient id="arc" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="var(--gold)"/><stop offset="1" stop-color="var(--gold-2)"/></linearGradient></defs>
-          <line x1="20" y1="150" x2="500" y2="150" stroke="var(--border-str)" stroke-width="1.5"/>
-          <text x="20" y="166" fill="var(--dim)" font-size="10" class="mono">E</text>
-          <text x="256" y="166" fill="var(--dim)" font-size="10" class="mono">S</text>
-          <text x="494" y="166" fill="var(--dim)" font-size="10" class="mono">W</text>
-          <path d="M20,150 Q260,-38 500,150" fill="none" stroke="var(--gold)" stroke-width="2" stroke-dasharray="2 6" opacity=".45"/>
-          <circle id="sun-glow" cx="260" cy="42" r="20" fill="none" stroke="var(--gold)" stroke-width="1.5" opacity=".35"/>
-          <circle id="sun-dot" cx="260" cy="42" r="11" fill="var(--gold)"/>
-          <text x="30" y="28" fill="var(--dim)" font-size="11" class="mono">
-            elev <tspan id="sun-elev">—</tspan>°  ·  az <tspan id="sun-az">—</tspan>°</text>
-          <text id="sun-label" x="490" y="28" text-anchor="end" fill="var(--dim)" font-size="11" class="mono">—</text>
+    <section class="card gauge-card s3">
+      <header>
+        <h3>Serenità del cielo</h3>
+        <p class="sub" id="kt-label">—</p>
+      </header>
+      <div class="gauge-wrap">
+        <svg width="190" height="190" viewBox="0 0 190 190" role="img" aria-label="Indice di serenità kt">
+          <circle cx="95" cy="95" r="80" fill="none" stroke="#1B1F3B" stroke-width="10"
+            stroke-dasharray="377 503" transform="rotate(135 95 95)" stroke-linecap="round"/>
+          <circle id="kt-arc" class="gauge-ring" cx="95" cy="95" r="80" fill="none" stroke="url(#gradBlue)"
+            stroke-width="10" stroke-dasharray="0 999" transform="rotate(135 95 95)"
+            stroke-linecap="round" filter="url(#glowBlue)" opacity="0"/>
+          <circle id="kt-arc-knob" cx="95" cy="95" r="6" fill="#fff" filter="url(#glowBlue)" opacity="0"/>
         </svg>
+        <div class="gauge-center">
+          <span class="icon"><svg class="ic"><use href="#i-sun"/></svg></span>
+        </div>
       </div>
-    </div>
+      <div class="overlay-pill">
+        <span class="end mono">0</span>
+        <div class="mid">
+          <div class="n mono" data-metric="clearsky_index">—</div>
+          <small>kt = GHI / GHI cielo sereno</small>
+        </div>
+        <span class="end mono">1</span>
+      </div>
+    </section>
 
-    <!-- RIGHT -->
-    <div class="col">
-      <div class="card">
-        <h3>Temperature</h3>
-        <div class="tiles">
-          <div class="tile"><div class="t">🌡️ Ambiente</div><div class="v mono"><span data-metric="ambient_temp">—</span>°C</div></div>
-          <div class="tile"><div class="t">🔆 Modulo*</div><div class="v mono"><span data-metric="module_temp">—</span>°C</div></div>
+    <section class="card ref-card s4">
+      <header>
+        <h3>Irraggiamento POA</h3>
+        <p class="sub">Piano dei moduli · locale vs provider</p>
+      </header>
+      <div class="ref-body">
+        <div class="ref-list">
+          <div class="ref-tile"><small>POA provider</small>
+            <b class="mono"><span data-metric="poa_provider">—</span> <span class="u">W/m²</span></b></div>
+          <div class="ref-tile"><small>Extraterrestre</small>
+            <b class="mono"><span data-metric="extraterrestrial">—</span> <span class="u">W/m²</span></b></div>
+          <div class="ref-tile"><small>Air mass</small>
+            <b class="mono" data-metric="air_mass">—</b></div>
         </div>
-        <div class="hint">*stima Faiman · POA + vento</div>
-      </div>
-      <div class="card">
-        <h3>Meteo</h3>
-        <div class="tiles">
-          <div class="tile"><div class="t">💨 Vento</div><div class="v mono"><span data-metric="wind_speed">—</span> m/s</div></div>
-          <div class="tile"><div class="t">🧭 Dir</div><div class="v mono"><span data-metric="wind_direction">—</span>°</div></div>
-          <div class="tile"><div class="t">💧 Umidità</div><div class="v mono"><span data-metric="rel_humidity">—</span>%</div></div>
-          <div class="tile"><div class="t">☁️ Nuvole</div><div class="v mono"><span data-metric="cloud_cover">—</span>%</div></div>
-          <div class="tile"><div class="t">🌧️ Pioggia</div><div class="v mono" data-metric="precipitation">—</div></div>
-          <div class="tile"><div class="t">📊 Press.</div><div class="v mono" data-metric="surface_pressure">—</div></div>
+        <div class="gauge-wrap">
+          <svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="POA locale">
+            <circle cx="85" cy="85" r="70" fill="none" stroke="#1B1F3B" stroke-width="9"
+              stroke-dasharray="330 440" transform="rotate(135 85 85)" stroke-linecap="round"/>
+            <circle id="poa-arc" class="gauge-ring" cx="85" cy="85" r="70" fill="none" stroke="url(#gradGreen)"
+              stroke-width="9" stroke-dasharray="0 999" transform="rotate(135 85 85)"
+              stroke-linecap="round" filter="url(#glowGreen)" opacity="0"/>
+            <circle id="poa-arc-knob" cx="85" cy="85" r="5.5" fill="#fff" filter="url(#glowGreen)" opacity="0"/>
+          </svg>
+          <div class="gauge-center">
+            <span class="unit">POA locale</span>
+            <span class="big mono" data-metric="poa_local">—</span>
+            <span class="unit">W/m²</span>
+          </div>
         </div>
       </div>
-      <div class="card">
-        <h3>Salute</h3>
-        <div class="kv"><span>Ultimo aggiornamento</span><b class="mono" id="dataage-field">—</b></div>
-        <div class="kv"><span>Errori poll</span><b class="mono" data-metric="poll_errors_total">—</b></div>
-        <div class="kv"><span>Fonte</span><b id="provider-field">—</b></div>
+    </section>
+
+    <!-- ============ row 3 · sun path + irradiance ============ -->
+    <section class="card chart-card s7">
+      <header>
+        <h3>Percorso del sole</h3>
+        <p class="sub"><span class="up mono">elev <span id="sun-elev">—</span>°</span>
+          · az <span class="mono" id="sun-az">—</span>° · <span id="sun-label">—</span></p>
+      </header>
+      <svg class="sky" viewBox="0 0 520 190" preserveAspectRatio="xMidYMid meet" role="img"
+        aria-label="Posizione attuale del sole sulla volta celeste">
+        <g stroke="rgba(255,255,255,.08)" stroke-dasharray="3 5">
+          <line x1="20" y1="30" x2="500" y2="30"/><line x1="20" y1="70" x2="500" y2="70"/>
+          <line x1="20" y1="110" x2="500" y2="110"/>
+        </g>
+        <g fill="#718096" font-size="9" font-family="inherit">
+          <text x="6" y="33">60°</text><text x="6" y="73">40°</text><text x="6" y="113">20°</text>
+        </g>
+        <path d="M20,150 Q260,-38 500,150 L500,150 20,150 Z" fill="url(#gradArea)"/>
+        <path d="M20,150 Q260,-38 500,150" fill="none" stroke="url(#gradBlue)" stroke-width="2.5"/>
+        <line x1="20" y1="150" x2="500" y2="150" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
+        <g fill="#A0AEC0" font-size="10" font-family="inherit">
+          <text x="16" y="168">EST</text><text x="246" y="168">SUD</text><text x="478" y="168">OVEST</text>
+        </g>
+        <circle id="sun-glow" cx="260" cy="42" r="17" fill="none" stroke="#FFB547" stroke-width="1.5" opacity=".4"/>
+        <circle id="sun-dot" cx="260" cy="42" r="9" fill="#FFB547" filter="url(#glowAmber)"/>
+      </svg>
+    </section>
+
+    <section class="card s5">
+      <header>
+        <h3>Componenti irraggiamento</h3>
+        <p class="sub">GHI · DNI · DHI · POA — live</p>
+      </header>
+      <div class="bars-panel" aria-hidden="true">
+        <div class="vbar-col"><div class="vbar" id="vb-ghi"></div><small>GHI</small></div>
+        <div class="vbar-col"><div class="vbar" id="vb-dni"></div><small>DNI</small></div>
+        <div class="vbar-col"><div class="vbar" id="vb-dhi"></div><small>DHI</small></div>
+        <div class="vbar-col"><div class="vbar" id="vb-poa"></div><small>POA</small></div>
       </div>
-    </div>
+      <div class="mini-stats">
+        <div class="mini"><div class="head"><span class="bx"><svg class="ic"><use href="#i-sun"/></svg></span>GHI</div>
+          <div class="n mono"><span data-metric="ghi">—</span> <small>W/m²</small></div>
+          <div class="track"><i id="tk-ghi"></i></div></div>
+        <div class="mini"><div class="head"><span class="bx"><svg class="ic"><use href="#i-zap"/></svg></span>DNI</div>
+          <div class="n mono"><span data-metric="dni">—</span> <small>W/m²</small></div>
+          <div class="track"><i id="tk-dni"></i></div></div>
+        <div class="mini"><div class="head"><span class="bx"><svg class="ic"><use href="#i-cloud"/></svg></span>DHI</div>
+          <div class="n mono"><span data-metric="dhi">—</span> <small>W/m²</small></div>
+          <div class="track"><i id="tk-dhi"></i></div></div>
+        <div class="mini"><div class="head"><span class="bx"><svg class="ic"><use href="#i-gauge"/></svg></span>POA</div>
+          <div class="n mono"><span data-metric="poa_local">—</span> <small>W/m²</small></div>
+          <div class="track"><i id="tk-poa"></i></div></div>
+      </div>
+    </section>
+
+    <!-- ============ row 4 · weather table + health ============ -->
+    <section class="card s7">
+      <header>
+        <h3>Condizioni meteo</h3>
+        <p class="sub"><span class="up">●</span> 6 sensori · aggiornamento live</p>
+      </header>
+      <table class="vt">
+        <thead><tr><th>Sensore</th><th>Valore</th><th>Livello</th></tr></thead>
+        <tbody>
+          <tr><td><span class="who"><svg class="ic"><use href="#i-drop"/></svg>Umidità relativa</span></td>
+            <td class="mono"><span data-metric="rel_humidity">—</span> %</td>
+            <td class="lvl"><span class="pct mono"><span data-metric="rel_humidity">—</span>%</span>
+              <div class="track"><i id="tb-hum"></i></div></td></tr>
+          <tr><td><span class="who"><svg class="ic"><use href="#i-cloud"/></svg>Copertura nuvole</span></td>
+            <td class="mono"><span data-metric="cloud_cover">—</span> %</td>
+            <td class="lvl"><span class="pct mono"><span data-metric="cloud_cover">—</span>%</span>
+              <div class="track"><i id="tb-cloud"></i></div></td></tr>
+          <tr><td><span class="who"><svg class="ic"><use href="#i-wind"/></svg>Vento</span></td>
+            <td class="mono"><span data-metric="wind_speed">—</span> m/s</td>
+            <td class="lvl"><span class="pct mono">su 20 m/s</span>
+              <div class="track"><i id="tb-wind"></i></div></td></tr>
+          <tr><td><span class="who"><svg class="ic"><use href="#i-compass"/></svg>Direzione vento</span></td>
+            <td class="mono"><span data-metric="wind_direction">—</span>°</td>
+            <td class="lvl"><span class="pct mono" id="wind-dir-cell">—</span></td></tr>
+          <tr><td><span class="who"><svg class="ic"><use href="#i-rain"/></svg>Precipitazioni</span></td>
+            <td class="mono"><span data-metric="precipitation">—</span> mm/h</td>
+            <td class="lvl"><span class="pct mono">su 10 mm/h</span>
+              <div class="track"><i id="tb-rain"></i></div></td></tr>
+          <tr><td><span class="who"><svg class="ic"><use href="#i-gauge"/></svg>Pressione</span></td>
+            <td class="mono"><span data-metric="surface_pressure">—</span> hPa</td>
+            <td class="lvl"><span class="pct mono">950–1050 hPa</span>
+              <div class="track"><i id="tb-press"></i></div></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card s5">
+      <header>
+        <h3>Salute sistema</h3>
+        <p class="sub"><svg class="ic c-green" style="vertical-align:-3px"><use href="#i-check"/></svg>
+          <b id="provider-field">—</b></p>
+      </header>
+      <div class="timeline">
+        <div class="tl"><span class="ic-w c-blue"><svg class="ic"><use href="#i-bell"/></svg></span>
+          <div><b>Ultimo aggiornamento dati</b><small class="mono" id="dataage-field">—</small></div></div>
+        <div class="tl"><span class="ic-w c-green"><svg class="ic"><use href="#i-globe"/></svg></span>
+          <div><b>Provider meteo</b><small>Open-Meteo · poll periodico forecast</small></div></div>
+        <div class="tl"><span class="ic-w c-amber"><svg class="ic"><use href="#i-alert"/></svg></span>
+          <div><b>Errori polling</b><small class="mono"><span data-metric="poll_errors_total">—</span> errori totali</small></div></div>
+        <div class="tl"><span class="ic-w c-cyan"><svg class="ic"><use href="#i-server"/></svg></span>
+          <div><b>Modbus TCP slave</b><small>mappa registri in /api/catalog.json</small></div></div>
+        <div class="tl"><span class="ic-w c-blue"><svg class="ic"><use href="#i-zap"/></svg></span>
+          <div><b>Stream SSE</b><small>eventi live su /api/stream</small></div></div>
+      </div>
+    </section>
 
   </div>
 
-  <div class="footer">
-    <span class="mono">pv-hub v0.1</span>
-    <a href="/api/state.json">/api/state.json</a>
-    <a href="/api/stream">/api/stream · SSE</a>
-    <a href="/api/catalog.json">/api/catalog.json</a>
-    <span class="grow"></span>
-    <span>Dati · <a href="https://open-meteo.com">Open-Meteo</a> · Mappa © Esri</span>
-  </div>
+  <footer class="footer">
+    <span>© 2026 · <b>pv-hub</b> v0.1 · dati <a href="https://open-meteo.com" rel="noopener">Open-Meteo</a> · mappa © Esri</span>
+    <nav>
+      <a href="/api/state.json">state.json</a>
+      <a href="/api/stream">stream · SSE</a>
+      <a href="/api/catalog.json">catalog.json</a>
+    </nav>
+  </footer>
 
-</div>
+</main>
+
 <script src="/assets/vendor/leaflet.js"></script>
 <script src="/assets/app.js"></script>
 </body>

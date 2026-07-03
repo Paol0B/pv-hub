@@ -1,25 +1,10 @@
 "use strict";
 
-// ---- theme: auto (prefers-color-scheme) + toggle persisted ----
-(function initTheme() {
-  const saved = localStorage.getItem("pvhub-theme");
-  const sys = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  const theme = saved || sys;
-  document.documentElement.setAttribute("data-theme", theme);
-  setToggleIcon(theme);
-})();
-function setToggleIcon(theme) {
-  const b = document.getElementById("tg");
-  if (b) b.textContent = theme === "dark" ? "🌙" : "☀️";
+// ---- sidenav (mobile) ----
+function toggleSidenav(force) {
+  document.body.classList.toggle("nav-open", force);
 }
-function toggleTheme() {
-  const r = document.documentElement;
-  const next = r.getAttribute("data-theme") === "dark" ? "light" : "dark";
-  r.setAttribute("data-theme", next);
-  localStorage.setItem("pvhub-theme", next);
-  setToggleIcon(next);
-}
-window.toggleTheme = toggleTheme;
+window.toggleSidenav = toggleSidenav;
 
 // ---- number formatting ----
 function fmt(v) {
@@ -43,6 +28,7 @@ function fmtAge(sec) {
 }
 
 // ---- SVG helpers ----
+// 270° ring gauge (rotate 135): fill the arc and park the glow knob on its end.
 function setArc(id, value, max) {
   const el = document.getElementById(id);
   if (!el || value === null || value === undefined) return;
@@ -51,15 +37,29 @@ function setArc(id, value, max) {
   const frac = Math.max(0, Math.min(1, value / max));
   el.setAttribute("stroke-dasharray", `${(frac * arc270).toFixed(1)} 9999`);
   el.style.opacity = frac < 0.01 ? "0" : "1"; // hide stray cap-dot near zero
+  const knob = document.getElementById(id + "-knob");
+  if (knob) {
+    const cx = +el.getAttribute("cx"), cy = +el.getAttribute("cy");
+    const a = (135 + frac * 270) * Math.PI / 180; // screen coords, y-down
+    knob.setAttribute("cx", (cx + r * Math.cos(a)).toFixed(1));
+    knob.setAttribute("cy", (cy + r * Math.sin(a)).toFixed(1));
+    knob.setAttribute("opacity", frac < 0.01 ? "0" : "1");
+  }
 }
-function setBar(id, value, max) {
+function setBar(id, value, max, offset) {
   const el = document.getElementById(id);
   if (!el || value === null || value === undefined) return;
-  el.style.width = Math.max(0, Math.min(100, (value / max) * 100)).toFixed(0) + "%";
+  const frac = ((value - (offset || 0)) / (max - (offset || 0))) * 100;
+  el.style.width = Math.max(0, Math.min(100, frac)).toFixed(0) + "%";
 }
+function setVBar(id, value, max) {
+  const el = document.getElementById(id);
+  if (!el || value === null || value === undefined) return;
+  el.style.height = Math.max(0, Math.min(100, (value / max) * 100)).toFixed(0) + "%";
+}
+
 // Sky dome: x from azimuth (E=left, S=middle, W=right), y from elevation
-// (horizon at y=150, higher sun = higher up). At night the sun sits dimmed
-// on the horizon at its compass direction, with a moon label.
+// (horizon at y=150). At night the sun sits dimmed on the horizon.
 function updateSun(elev, az) {
   const dot = document.getElementById("sun-dot");
   const glow = document.getElementById("sun-glow");
@@ -80,11 +80,12 @@ function updateSun(elev, az) {
     e.setAttribute("cx", x.toFixed(1));
     e.setAttribute("cy", y.toFixed(1));
   }
-  dot.setAttribute("fill", day ? "var(--gold)" : "var(--dim)");
-  dot.setAttribute("r", day ? "11" : "7");
-  dot.style.opacity = "1";
-  glow.style.opacity = day ? ".35" : "0";
-  if (label) label.textContent = day ? "☀ giorno" : "🌙 notte";
+  dot.setAttribute("fill", day ? "#FFB547" : "#718096");
+  dot.setAttribute("r", day ? "9" : "6");
+  if (day) dot.setAttribute("filter", "url(#glowAmber)");
+  else dot.removeAttribute("filter");
+  glow.style.opacity = day ? ".4" : "0";
+  if (label) label.textContent = day ? "giorno" : "notte";
 }
 
 // ---- Leaflet map ----
@@ -106,7 +107,7 @@ function initMap(lat, lon) {
     { maxZoom: 19, opacity: 0.9 }
   ).addTo(map);
   marker = L.circleMarker([lat, lon], {
-    radius: 9, color: "#ffc24b", weight: 3, fillColor: "#ffc24b", fillOpacity: 0.9,
+    radius: 9, color: "#0075FF", weight: 3, fillColor: "#0075FF", fillOpacity: 0.9,
   }).addTo(map);
 }
 
@@ -130,12 +131,38 @@ function render(state) {
   const azf = document.getElementById("azimuth-field");
   if (azf && az !== null) azf.textContent = `${az.toFixed(0)}° · ${cardinal(az)}`;
 
-  // gauges + bars
+  // POA delta: green when local ≥ provider, red otherwise
+  const delta = num(m, "poa_delta_pct");
+  const dEl = document.getElementById("poa-delta");
+  if (dEl && delta !== null) dEl.className = delta < 0 ? "down" : "up";
+
+  // wind direction (cardinal)
+  const wd = num(m, "wind_direction");
+  for (const id of ["wind-dir", "wind-dir-cell"]) {
+    const el = document.getElementById(id);
+    if (el && wd !== null) el.textContent = cardinal(wd);
+  }
+
+  // gauges
   setArc("poa-arc", num(m, "poa_local"), 1200);
   setArc("kt-arc", num(m, "clearsky_index"), 1.0);
-  setBar("bar-ghi", num(m, "ghi"), 1000);
-  setBar("bar-dni", num(m, "dni"), 1000);
-  setBar("bar-dhi", num(m, "dhi"), 400);
+
+  // irradiance bars + tracks
+  setVBar("vb-ghi", num(m, "ghi"), 1000);
+  setVBar("vb-dni", num(m, "dni"), 1000);
+  setVBar("vb-dhi", num(m, "dhi"), 400);
+  setVBar("vb-poa", num(m, "poa_local"), 1200);
+  setBar("tk-ghi", num(m, "ghi"), 1000);
+  setBar("tk-dni", num(m, "dni"), 1000);
+  setBar("tk-dhi", num(m, "dhi"), 400);
+  setBar("tk-poa", num(m, "poa_local"), 1200);
+
+  // weather table tracks
+  setBar("tb-hum", num(m, "rel_humidity"), 100);
+  setBar("tb-cloud", num(m, "cloud_cover"), 100);
+  setBar("tb-wind", num(m, "wind_speed"), 20);
+  setBar("tb-rain", num(m, "precipitation"), 10);
+  setBar("tb-press", num(m, "surface_pressure"), 1050, 950);
 
   // kt label
   const kt = num(m, "clearsky_index");
@@ -143,7 +170,7 @@ function render(state) {
   if (ktl) {
     if (kt === null) ktl.textContent = "—";
     else if (kt >= 0.75) ktl.textContent = "Cielo sereno";
-    else if (kt >= 0.4) ktl.textContent = "Parz. nuvoloso";
+    else if (kt >= 0.4) ktl.textContent = "Parzialmente nuvoloso";
     else ktl.textContent = "Coperto";
   }
 
@@ -153,7 +180,8 @@ function render(state) {
   // health / provider
   const ok = state.provider.ok;
   document.getElementById("provider-badge").classList.toggle("bad", !ok);
-  document.getElementById("provider-field").textContent = state.provider.name;
+  document.getElementById("provider-field").textContent =
+    `${state.provider.name} · ${ok ? "operativo" : "errore"}`;
   const age = num(m, "data_age");
   document.getElementById("dataage-field").textContent = fmtAge(age);
 
