@@ -45,6 +45,15 @@ pub async fn run() -> Result<()> {
             }
         }));
     }
+    if cfg.ha_enable {
+        let c = cfg.clone();
+        let h = hub.clone();
+        tasks.push(tokio::spawn(async move {
+            if let Err(e) = sinks::homeassistant::serve(c, h).await {
+                tracing::error!("home assistant sink error: {e}");
+            }
+        }));
+    }
     {
         let c = cfg.clone();
         let h = hub.clone();
