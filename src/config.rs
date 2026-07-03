@@ -45,6 +45,15 @@ pub struct Config {
     pub modbus_unit_id: u8,
     pub modbus_word_order: WordOrder,
     pub modbus_holding_mirror: bool,
+    pub ha_enable: bool,
+    pub ha_mqtt_host: String,
+    pub ha_mqtt_port: u16,
+    pub ha_mqtt_username: Option<String>,
+    pub ha_mqtt_password: Option<String>,
+    pub ha_mqtt_client_id: String,
+    pub ha_discovery_prefix: String,
+    pub ha_node_id: String,
+    pub ha_publish_interval_s: u64,
     pub default_theme: String,
     pub log_level: String,
 }
@@ -144,6 +153,15 @@ impl Config {
             modbus_unit_id: u8_or("PVHUB_MODBUS_UNIT_ID", 1)?,
             modbus_word_order,
             modbus_holding_mirror: bool_or("PVHUB_MODBUS_HOLDING_MIRROR", true),
+            ha_enable: bool_or("PVHUB_HA_ENABLE", false),
+            ha_mqtt_host: str_or("PVHUB_HA_MQTT_HOST", "localhost"),
+            ha_mqtt_port: u16_or("PVHUB_HA_MQTT_PORT", 1883)?,
+            ha_mqtt_username: env.get("PVHUB_HA_MQTT_USERNAME").cloned(),
+            ha_mqtt_password: env.get("PVHUB_HA_MQTT_PASSWORD").cloned(),
+            ha_mqtt_client_id: str_or("PVHUB_HA_MQTT_CLIENT_ID", "pvhub"),
+            ha_discovery_prefix: str_or("PVHUB_HA_DISCOVERY_PREFIX", "homeassistant"),
+            ha_node_id: str_or("PVHUB_HA_NODE_ID", "pvhub"),
+            ha_publish_interval_s: u64_or("PVHUB_HA_PUBLISH_INTERVAL_S", 30)?,
             default_theme: str_or("PVHUB_DEFAULT_THEME", "auto"),
             log_level: str_or("PVHUB_LOG_LEVEL", "info"),
         })
@@ -201,5 +219,36 @@ mod tests {
         let mut m = base();
         m.insert("PVHUB_LATITUDE".into(), "120".into());
         assert!(Config::from_map(&m).is_err());
+    }
+
+    #[test]
+    fn ha_defaults_and_overrides() {
+        let c = Config::from_map(&base()).unwrap();
+        assert!(!c.ha_enable);
+        assert_eq!(c.ha_mqtt_host, "localhost");
+        assert_eq!(c.ha_mqtt_port, 1883);
+        assert_eq!(c.ha_mqtt_client_id, "pvhub");
+        assert_eq!(c.ha_discovery_prefix, "homeassistant");
+        assert_eq!(c.ha_node_id, "pvhub");
+        assert_eq!(c.ha_publish_interval_s, 30);
+        assert!(c.ha_mqtt_username.is_none());
+        assert!(c.ha_mqtt_password.is_none());
+
+        let mut m = base();
+        m.insert("PVHUB_HA_ENABLE".into(), "true".into());
+        m.insert("PVHUB_HA_MQTT_HOST".into(), "broker.local".into());
+        m.insert("PVHUB_HA_MQTT_PORT".into(), "8883".into());
+        m.insert("PVHUB_HA_MQTT_USERNAME".into(), "user".into());
+        m.insert("PVHUB_HA_MQTT_PASSWORD".into(), "secret".into());
+        m.insert("PVHUB_HA_NODE_ID".into(), "roof".into());
+        m.insert("PVHUB_HA_PUBLISH_INTERVAL_S".into(), "15".into());
+        let c = Config::from_map(&m).unwrap();
+        assert!(c.ha_enable);
+        assert_eq!(c.ha_mqtt_host, "broker.local");
+        assert_eq!(c.ha_mqtt_port, 8883);
+        assert_eq!(c.ha_mqtt_username.as_deref(), Some("user"));
+        assert_eq!(c.ha_mqtt_password.as_deref(), Some("secret"));
+        assert_eq!(c.ha_node_id, "roof");
+        assert_eq!(c.ha_publish_interval_s, 15);
     }
 }
