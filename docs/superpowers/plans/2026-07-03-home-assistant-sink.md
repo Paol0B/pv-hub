@@ -188,9 +188,11 @@ pub fn discovery_payload(d: &MetricDef, cfg: &Config) -> Value {
     obj.insert("unique_id".into(), json!(format!("pvhub_{node}_{}", d.id)));
     obj.insert("object_id".into(), json!(format!("pvhub_{}", d.id)));
     obj.insert("state_topic".into(), json!(state_topic(node)));
+    // The state topic carries the full state_json document, which nests metric
+    // values under a top-level `metrics` key — hence `value_json.metrics.<id>.value`.
     obj.insert(
         "value_template".into(),
-        json!(format!("{{{{ value_json.{}.value }}}}", d.id)),
+        json!(format!("{{{{ value_json.metrics.{}.value }}}}", d.id)),
     );
     if let Some(u) = unit {
         obj.insert("unit_of_measurement".into(), json!(u));
@@ -283,7 +285,7 @@ mod tests {
     fn ghi_payload_shape() {
         let p = discovery_payload(def_for(Metric::Ghi).unwrap(), &cfg());
         assert_eq!(p["state_topic"], "pvhub/pvhub/state");
-        assert_eq!(p["value_template"], "{{ value_json.ghi.value }}");
+        assert_eq!(p["value_template"], "{{ value_json.metrics.ghi.value }}");
         assert_eq!(p["unit_of_measurement"], "W/m²");
         assert_eq!(p["device_class"], "irradiance");
         assert_eq!(p["state_class"], "measurement");

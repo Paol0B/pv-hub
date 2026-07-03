@@ -75,7 +75,8 @@ For each `MetricDef d` in `catalog()`, publish a retained config to
 - `unique_id`: `pvhub_<node>_<d.id>`
 - `object_id`: `pvhub_<d.id>` (stable entity_id hint)
 - `state_topic`: `pvhub/<node>/state`
-- `value_template`: `{{ value_json.<d.id>.value }}`
+- `value_template`: `{{ value_json.metrics.<d.id>.value }}` (the state payload nests
+  metrics under a top-level `metrics` key — see §6)
 - `unit_of_measurement`: normalized unit (see mapping) — omitted when empty
 - `device_class`: from mapping — omitted when none
 - `state_class`: from mapping (default `measurement`)
@@ -132,8 +133,9 @@ Published (retained) to `pvhub/<node>/state` as JSON. Same structure as
 }
 ```
 
-`value_template: {{ value_json.ghi.value }}` reads each sensor. A `null` value maps
-to HA "unknown" for that sensor, which is acceptable.
+`value_template: {{ value_json.metrics.ghi.value }}` reads each sensor (note the
+`metrics.` segment — values are nested under the top-level `metrics` key). A `null`
+value maps to HA "unknown" for that sensor, which is acceptable.
 
 ## 7. Lifecycle & robustness
 
